@@ -17,6 +17,11 @@ from core.human_override import apply_overrides
 from core.finalization import finalize_forecast
 from core.learning import update_learning
 
+# ✅ AGENTS
+from agents.prompt_agent import generate_prompt_clarification
+from agents.summary_agent import generate_summary
+from agents.memory_agent import log_session
+
 st.set_page_config(page_title="Agentic Demand Forecasting", layout="wide")
 st.title("📊 Agentic AI Forecasting Tool")
 
@@ -27,6 +32,12 @@ if uploaded_file:
     df = pd.read_csv(uploaded_file)
     df.to_csv("data/uploaded.csv", index=False)
     df = prepare_data("data/uploaded.csv")
+
+    # 🤖 Prompt Agent
+    st.subheader("🤖 Prompt Agent: Clarifying Questions")
+    context = df.head(5).to_csv(index=False)
+    clarification = generate_prompt_clarification(context)
+    st.info(clarification)
 
     st.subheader("✅ Cleaned Data")
     st.write(df)
@@ -50,11 +61,19 @@ if uploaded_file:
     # Step 7: Learn
     update_learning(df, forecast_df)
 
-    # Chart
+    # 📈 Visualization
     st.subheader("📈 Forecast Visualization")
     fig = create_side_by_side_chart(forecast_df)
     st.plotly_chart(fig, use_container_width=True)
 
-    # Download forecast
+    # 📥 Download
     st.download_button("📥 Download Forecast CSV", data=forecast_df.to_csv(index=False),
                        file_name="forecast_result.csv", mime="text/csv")
+
+    # 📝 Summary Agent
+    st.subheader("📝 Forecasting Session Summary")
+    summary_text = generate_summary(len(df), len(df.columns), len(segments), model_map)
+    st.success(summary_text)
+
+    # 🧠 Memory Agent
+    log_session(summary_text)
