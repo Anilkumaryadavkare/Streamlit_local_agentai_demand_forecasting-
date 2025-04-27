@@ -9,3 +9,6 @@ streamlit
 openai
 plotly
 kaleido
+cmdstanpy
+azure-identity
+azure-ai-ml
