@@ -1,6 +1,11 @@
 import os
 from openai import AzureOpenAI
 
+from dotenv import load_dotenv
+
+# Load variables from .env file
+load_dotenv()
+
 # Load from environment variables
 endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")

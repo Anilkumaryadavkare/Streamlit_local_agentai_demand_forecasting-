@@ -12,3 +12,4 @@ kaleido
 cmdstanpy
 azure-identity
 azure-ai-ml
+python-dotenv
