@@ -1,79 +1,78 @@
 import sys
 import os
+import streamlit as st
+import pandas as pd
 
-# 🔧 Add project root to sys.path if not already present
+# Project root setup
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT_DIR not in sys.path:
     sys.path.append(ROOT_DIR)
 
-import streamlit as st
-import pandas as pd
+from stages.cleaning_stage import render_cleaning_stage
+from stages.prompt_agent_stage import render_prompt_agent_stage
+from stages.segmentation_stage import render_segmentation_stage
+from stages.modeling_stage import render_modeling_stage
+from stages.forecasting_stage import render_forecasting_stage
+from stages.scenario_stage import render_scenario_stage  # NEW IMPORT
+from stages.summary_stage import render_summary_stage
 
-from core.data_prep import prepare_data
-from core.segmentation import segment_demand
-from core.model_selection import suggest_best_model
-from core.forecasting import generate_forecast, create_side_by_side_chart
-from core.human_override import apply_overrides
-from core.finalization import finalize_forecast
-from core.learning import update_learning
+# Session state initialization
+if 'current_stage' not in st.session_state:
+    st.session_state.update({
+        'current_stage': 0,
+        'df_raw': None,
+        'df_clean': None,
+        'audit_logs': None,
+        'user_responses': {},
+        'segments': None,
+        'model_map': None,
+        'forecast_df': None,
+        'scenario_forecast': None  # NEW STATE
+    })
 
-# ✅ AGENTS
-from agents.prompt_agent import generate_prompt_clarification
-from agents.summary_agent import generate_summary
-from agents.memory_agent import log_session
+st.set_page_config(page_title="Agentic Forecasting", layout="wide")
+st.title("📊 Demand Forecasting Workflow")
 
-st.set_page_config(page_title="Agentic Demand Forecasting", layout="wide")
-st.title("📊 Agentic AI Forecasting Tool")
+# Updated stages with scenario modeling
+STAGES = ["Upload", "Cleaning", "Clarifications", "Segmentation", 
+         "Modeling", "Forecasting", "Scenario Modeling", "Summary"]  # MODIFIED
+progress = st.session_state.current_stage / (len(STAGES)-1)
+st.progress(progress, text=f"Current Stage: {STAGES[st.session_state.current_stage]}")
 
-uploaded_file = st.file_uploader("Upload your demand CSV", type=["csv"])
+# File upload
+uploaded_file = st.file_uploader("Upload CSV", type=["csv"], key="file_uploader")
 
+# Stage routing with scenario stage
 if uploaded_file:
-    # Step 1: Load & Clean
-    df = pd.read_csv(uploaded_file)
-    df.to_csv("data/uploaded.csv", index=False)
-    df = prepare_data("data/uploaded.csv")
+    if st.session_state.current_stage == 0:
+        st.session_state.df_raw = pd.read_csv(uploaded_file)
+        st.session_state.current_stage += 1
 
-    # 🤖 Prompt Agent
-    st.subheader("🤖 Prompt Agent: Clarifying Questions")
-    context = df.head(5).to_csv(index=False)
-    clarification = generate_prompt_clarification(context)
-    st.info(clarification)
+    if st.session_state.current_stage >= 1:
+        render_cleaning_stage()
 
-    st.subheader("✅ Cleaned Data")
-    st.write(df)
+    if st.session_state.current_stage >= 2:
+        render_prompt_agent_stage()
 
-    # Step 2: Segment
-    segments = segment_demand(df)
+    if st.session_state.current_stage >= 3:
+        render_segmentation_stage()
 
-    # Step 3: Model Selection
-    model_map = {cid: suggest_best_model(seg_df) for cid, seg_df in segments.items()}
-    st.markdown(f"**Selected Models:** {model_map}")
+    if st.session_state.current_stage >= 4:
+        render_modeling_stage()
 
-    # Step 4: Forecast
-    forecast_df = generate_forecast(segments, model_map)
+    if st.session_state.current_stage >= 5:
+        render_forecasting_stage()
 
-    # Step 5: Override
-    forecast_df = apply_overrides(forecast_df)
+    if st.session_state.current_stage >= 6:  # NEW SCENARIO STAGE
+        render_scenario_stage()
 
-    # Step 6: Finalize & Download
-    finalize_forecast(forecast_df)
+    if st.session_state.current_stage >= 7:  # UPDATED SUMMARY STAGE
+        render_summary_stage()
 
-    # Step 7: Learn
-    update_learning(df, forecast_df)
-
-    # 📈 Visualization
-    st.subheader("📈 Forecast Visualization")
-    fig = create_side_by_side_chart(forecast_df)
-    st.plotly_chart(fig, use_container_width=True)
-
-    # 📥 Download
-    st.download_button("📥 Download Forecast CSV", data=forecast_df.to_csv(index=False),
-                       file_name="forecast_result.csv", mime="text/csv")
-
-    # 📝 Summary Agent
-    st.subheader("📝 Forecasting Session Summary")
-    summary_text = generate_summary(len(df), len(df.columns), len(segments), model_map)
-    st.success(summary_text)
-
-    # 🧠 Memory Agent
-    log_session(summary_text)
+# Navigation controls
+if st.session_state.current_stage > 0:
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        if st.button("◀ Previous Stage"):
+            st.session_state.current_stage = max(0, st.session_state.current_stage - 1)
+            st.rerun()

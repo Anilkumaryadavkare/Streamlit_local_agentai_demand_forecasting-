@@ -2,7 +2,6 @@ pandas
 numpy
 scikit-learn
 xgboost
-pystan
 prophet
 statsmodels
 streamlit

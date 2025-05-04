@@ -2,62 +2,94 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-def generate_forecast(segments, model_map=None):
+def generate_forecast(segments, model_map, forecast_periods=4):
     """
-    Generate forecasts for each cluster using a simple rolling average.
-    
-    Args:
-        segments (dict): A dictionary with cluster IDs as keys and DataFrames as values.
-        model_map (dict): Optional dict mapping cluster IDs to model names (not used in this MVP).
-    
-    Returns:
-        pd.DataFrame: Combined forecasted DataFrame.
+    Generate past and future forecasts with clear labeling
     """
     forecast_dfs = []
-
     for cluster_id, df in segments.items():
-        if 'demand' not in df.columns:
-            print(f"[!] Cluster {cluster_id} missing 'demand'. Skipping.")
+        # Add model tracking
+        model_name = model_map.get(cluster_id, "Prophet")
+        df['model'] = model_name
+        df['cluster'] = cluster_id
+    for segment_key, df in segments.items():
+        if 'date' not in df.columns or 'demand' not in df.columns:
+            continue
+        
+        df = df.copy()
+        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        df = df.dropna(subset=['date']).sort_values('date')
+
+        if df.empty:
             continue
 
-        df = df.copy()
-        df = df.sort_values("date")
+        # Historical forecast (simple moving average)
         df['forecast'] = df['demand'].rolling(window=3).mean().bfill()
-        forecast_dfs.append(df)
+        df['forecast_type'] = 'Past Forecast'
+        df['Segment'] = segment_key
 
-    if not forecast_dfs:
-        raise ValueError("No valid clusters found.")
+        # Future forecast
+        last_date = df['date'].max()
+        future_dates = pd.date_range(
+            start=last_date + pd.DateOffset(months=1),
+            periods=forecast_periods,
+            freq='MS'
+        )
 
-    combined_forecast_df = pd.concat(forecast_dfs, ignore_index=True)
-    print("[✔] Forecasts created using simple rolling average.")
-    return combined_forecast_df
+        future_df = pd.DataFrame({
+            'date': future_dates,
+            'forecast': df['forecast'].iloc[-1],  # Flat projection
+            'forecast_type': 'Future Forecast',
+            'Segment': segment_key
+        })
 
+        forecast_dfs.append(pd.concat([df, future_df], ignore_index=True))
+    return pd.concat(forecast_dfs)
+    combined = pd.concat(forecast_dfs, ignore_index=True)
+    print(f"[✔] Generated {forecast_periods} period future forecast")
+    return combined
 
 def create_side_by_side_chart(df):
-    """
-    Create a side-by-side Plotly chart of actual vs forecasted demand.
-    
-    Args:
-        df (pd.DataFrame): Must contain 'date', 'demand', 'forecast'.
-    
-    Returns:
-        plotly.graph_objects.Figure
-    """
-    fig = make_subplots(rows=1, cols=2, subplot_titles=("Actual Demand", "Forecasted Demand"))
+    """Professional timeline visualization"""
+    fig = go.Figure()
 
-    fig.add_trace(
-        go.Scatter(x=df['date'], y=df['demand'], mode='lines+markers', name='Actual'),
-        row=1, col=1
-    )
+    # Actual Demand
+    if 'demand' in df.columns:
+        fig.add_trace(go.Scatter(
+            x=df['date'],
+            y=df['demand'],
+            mode='lines+markers',
+            name='Actual Demand',
+            line=dict(color='#1f77b4', width=3)
+        ))
 
-    fig.add_trace(
-        go.Scatter(x=df['date'], y=df['forecast'], mode='lines+markers', name='Forecast'),
-        row=1, col=2
-    )
+    # Past Forecast
+    past = df[df['forecast_type'] == 'Past Forecast']
+    fig.add_trace(go.Scatter(
+        x=past['date'],
+        y=past['forecast'],
+        mode='lines+markers',
+        name='Past Forecast (Validation)',
+        line=dict(color='#ff7f0e', dash='dash', width=2)
+    ))
+
+    # Future Forecast
+    future = df[df['forecast_type'] == 'Future Forecast']
+    fig.add_trace(go.Scatter(
+        x=future['date'],
+        y=future['forecast'],
+        mode='lines+markers',
+        name='Next 6-Month Forecast',
+        line=dict(color='#2ca02c', width=4),
+        fill='tozeroy'
+    ))
 
     fig.update_layout(
-        title="Actual vs Forecasted Demand",
-        height=500,
-        width=1000
+        title="Demand Forecast Timeline",
+        xaxis_title="Timeline",
+        yaxis_title="Units",
+        template="plotly_white",
+        hovermode="x unified",
+        height=600
     )
     return fig
