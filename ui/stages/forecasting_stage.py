@@ -56,7 +56,7 @@ def render_forecasting_stage():
         st.session_state.user_model_map = user_model_choices
 
     st.subheader("🪄 Visualization Options")
-    chart_type = st.radio("Chart Type", ["Trend View", "Error Analysis"])
+    chart_type = st.radio("Chart Type", ["Trend View"])
     
     if chart_type == "Trend View":
         fig = create_side_by_side_chart(forecast_df)

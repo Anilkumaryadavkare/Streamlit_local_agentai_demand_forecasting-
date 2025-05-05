@@ -14,7 +14,7 @@ def render_cleaning_stage():
     st.dataframe(st.session_state.df_clean.head())
 
     with st.expander("🔍 Cleaning Audit Details"):
-        st.write(f"Rows removed: {len(st.session_state.df_raw) - len(st.session_state.df_clean)}")
+        # st.write(f"Rows removed: {len(st.session_state.df_raw) - len(st.session_state.df_clean)}")
         st.download_button("Download Action Log", 
                          st.session_state.audit_logs.get_log_df().to_csv(index=False), 
                          file_name="action_log.csv")

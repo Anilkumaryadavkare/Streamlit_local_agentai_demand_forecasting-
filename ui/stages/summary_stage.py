@@ -38,9 +38,9 @@ def render_summary_stage():
         else:
             st.write("No contextual inputs were provided")
 
-    # Data Quality Report
-    st.subheader("🧹 Data Quality Report")
-    col1, col2 = st.columns(2)
+    # # Data Quality Report
+    # st.subheader("🧹 Data Quality Report")
+    # col1, col2 = st.columns(2)
 
     error_df = st.session_state.audit_logs.get_error_df()
     log_df = st.session_state.audit_logs.get_log_df()
@@ -54,11 +54,11 @@ def render_summary_stage():
         duplicates_removed = log_df[log_df['action'] == 'Dropped duplicates']['rows_affected'].sum()
 
     with col1:
-        st.metric("Original Rows", len(st.session_state.df_raw))
+    #     st.metric("Original Rows", len(st.session_state.df_raw))
         st.metric("Invalid Dates Removed", invalid_dates)
 
     with col2:
-        st.metric("Cleaned Rows", len(st.session_state.df_clean))
+    #     st.metric("Cleaned Rows", len(st.session_state.df_clean))
         st.metric("Duplicate Rows Removed", int(duplicates_removed))
 
     # Forecast Performance Metrics
