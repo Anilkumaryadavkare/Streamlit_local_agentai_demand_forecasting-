@@ -58,7 +58,7 @@ def render_forecasting_stage():
 
     # 🧠 Model Selection
     st.subheader("🧠 Select Preferred Model(s) per Cluster (Optional)")
-    ALL_MxODELS = ['ARIMA', 'Prophet', 'RollingAverage', 'ExpSmoothing']
+    ALL_MODELS = ['ARIMA', 'Prophet', 'RollingAverage', 'ExpSmoothing']
 
     if not forecast_df.empty:
         clusters = forecast_df['cluster'].unique()
