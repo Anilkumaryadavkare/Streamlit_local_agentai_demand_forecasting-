@@ -1,3 +1,4 @@
+# app.py
 import sys
 import os
 import streamlit as st
@@ -13,7 +14,7 @@ from stages.prompt_agent_stage import render_prompt_agent_stage
 from stages.segmentation_stage import render_segmentation_stage
 from stages.modeling_stage import render_modeling_stage
 from stages.forecasting_stage import render_forecasting_stage
-from stages.scenario_stage import render_scenario_stage  # NEW IMPORT
+from stages.scenario_stage import render_scenario_stage
 from stages.summary_stage import render_summary_stage
 
 # Session state initialization
@@ -27,22 +28,21 @@ if 'current_stage' not in st.session_state:
         'segments': None,
         'model_map': None,
         'forecast_df': None,
-        'scenario_forecast': None  # NEW STATE
+        'scenario_forecast': None
     })
 
 st.set_page_config(page_title="Agentic Forecasting", layout="wide")
 st.title("📊 Demand Forecasting Workflow")
 
-# Updated stages with scenario modeling
 STAGES = ["Upload", "Cleaning", "Clarifications", "Segmentation", 
-         "Modeling", "Forecasting", "Scenario Modeling", "Summary"]  # MODIFIED
+         "Modeling", "Forecasting", "Scenario Modeling", "Summary"]
 progress = st.session_state.current_stage / (len(STAGES)-1)
 st.progress(progress, text=f"Current Stage: {STAGES[st.session_state.current_stage]}")
 
 # File upload
 uploaded_file = st.file_uploader("Upload CSV", type=["csv"], key="file_uploader")
 
-# Stage routing with scenario stage
+# Stage routing
 if uploaded_file:
     if st.session_state.current_stage == 0:
         st.session_state.df_raw = pd.read_csv(uploaded_file)
@@ -63,10 +63,10 @@ if uploaded_file:
     if st.session_state.current_stage >= 5:
         render_forecasting_stage()
 
-    if st.session_state.current_stage >= 6:  # NEW SCENARIO STAGE
+    if st.session_state.current_stage >= 6:
         render_scenario_stage()
 
-    if st.session_state.current_stage >= 7:  # UPDATED SUMMARY STAGE
+    if st.session_state.current_stage >= 7:
         render_summary_stage()
 
 # Navigation controls
