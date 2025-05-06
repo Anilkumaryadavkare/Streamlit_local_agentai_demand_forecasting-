@@ -33,7 +33,6 @@ def render_forecasting_stage():
 
     forecast_df = st.session_state.forecast_df
 
-    # 📜 Forecast Assumptions
     st.subheader("📜 Forecast Assumptions")
     st.markdown("""
     - Economic conditions remain stable  
@@ -42,7 +41,6 @@ def render_forecasting_stage():
     - Cleaned data is outlier-free  
     """)
 
-    # 📊 Model Performance
     st.subheader("📊 Model Performance Summary")
     if not forecast_df.empty:
         model_metrics_df = evaluate_forecast_models(forecast_df)
@@ -59,40 +57,43 @@ def render_forecasting_stage():
         st.warning("No forecast data to evaluate")
 
     # 🧠 Model Selection
-    st.subheader("🧠 Select Preferred Model (Optional)")
+    st.subheader("🧠 Select Preferred Model(s) per Cluster (Optional)")
+    ALL_MODELS = ['ARIMA', 'Prophet', 'RollingAverage', 'ExpSmoothing']
+
     if not forecast_df.empty:
         clusters = forecast_df['cluster'].unique()
         user_model_choices = {}
-        
+
         for cluster in clusters:
-            models = model_metrics_df[model_metrics_df['cluster'] == cluster]['model'].unique()
-            default = st.session_state.model_map.get(cluster, models[0] if len(models) > 0 else None)
-            if default:
-                selected = st.selectbox(
-                    f"Model for Cluster {cluster}",
-                    models,
-                    index=list(models).index(default)
-                )
-                user_model_choices[cluster] = selected
+            model_scores = model_metrics_df[model_metrics_df['cluster'] == cluster]['model'].dropna().unique().tolist()
+            available = sorted(set(model_scores + ALL_MODELS))  # Ensure all 4 show up
+
+            default = [st.session_state.model_map.get(cluster)] if isinstance(st.session_state.model_map.get(cluster), str) else []
+            default = default if default and default[0] in available else [available[0]]
+
+            selected = st.multiselect(
+                f"Select model(s) for Cluster {cluster}",
+                options=available,
+                default=default
+            )
+            user_model_choices[cluster] = selected
+
         st.session_state.user_model_map = user_model_choices
 
-    # 🪄 Visualization
     st.subheader("🪄 Visualization Options")
     chart_type = st.radio("Chart Type", ["Trend View"])
-    
+
     if chart_type == "Trend View":
         fig = create_side_by_side_chart(forecast_df)
     else:
         fig = plot_residuals(forecast_df)
-    
+
     st.plotly_chart(fig, use_container_width=True)
 
-    # 🔍 Forecast Summary
     st.subheader("🧾 Forecast Summary")
     summary = generate_forecast_summary(forecast_df)
     st.markdown(summary)
 
-    # 📦 Download Forecasts
     st.subheader("📦 Forecast Data Output")
     if not forecast_df.empty:
         st.download_button(
@@ -100,7 +101,7 @@ def render_forecasting_stage():
             forecast_df.to_csv(index=False),
             file_name="forecasts.csv"
         )
-    
+
     if st.button("✅ Approve Forecasts & Continue"):
         st.session_state.current_stage += 1
         st.rerun()
